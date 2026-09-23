@@ -1,0 +1,22 @@
+"use client";
+import { useState } from "react";
+import { CircleDashed, RefreshCw, Send, Upload } from "lucide-react";
+import { api, fileToBase64, fmtDate, useApi } from "@/lib/client/api";
+import { useShell } from "@/components/shell";
+import { Empty, ErrorBox, Field, Modal, PageHeader, Skeleton, useToast } from "@/components/ui";
+
+interface StatusMsg { id: string; senderId: string | null; senderName: string | null; type: string; body: string | null; caption: string | null; timestamp: number; hasMedia: boolean }
+export default function StatusPage() {
+  const { sessionId, session, can } = useShell(); const toast = useToast(); const ready = session?.status === "READY"; const [post, setPost] = useState(false); const [text, setText] = useState(""); const [bg, setBg] = useState("#075e54"); const [media, setMedia] = useState<File | null>(null); const [caption, setCaption] = useState(""); const [busy, setBusy] = useState(false);
+  const { data, loading, error, reload } = useApi<StatusMsg[]>(sessionId && ready ? `status?sessionId=${sessionId}` : null, [sessionId, ready]);
+  const send = async () => { setBusy(true); try { if (media) await api(`status/media?sessionId=${sessionId}`, { method: "POST", json: { base64: `data:${media.type};base64,${await fileToBase64(media)}`, kind: media.type.startsWith("video/") ? "video" : "image", caption } }); else await api(`status/text?sessionId=${sessionId}`, { method: "POST", json: { text, backgroundColor: bg } }); toast.success("Status posted"); setPost(false); setText(""); setMedia(null); reload(true); } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); } };
+  return <div>
+    <PageHeader title="Status / Stories" subtitle="Posting uses sendTextStatus / sendImageStatus / sendVideoStatus. The feed lists status@broadcast messages seen by this session (WPPConnect 2.3.3 does not expose a status-viewers API)." actions={<>{can("OPERATOR") && ready && <button className="btn-primary" onClick={() => setPost(true)}><Send size={16} /> Post status</button>}<button className="btn-secondary" onClick={() => reload()}><RefreshCw size={16} /></button></>} />
+    {!ready ? <Empty icon={<CircleDashed size={36} />} title="Session not ready" /> : error ? <ErrorBox error={error} retry={() => reload()} /> : loading && !data ? <Skeleton /> : !data?.length ? <Empty icon={<CircleDashed size={36} />} title="No status updates" text="Contacts' status updates appear here once the session receives them." /> :
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{data.map((s) => <div key={s.id} className="card overflow-hidden">{s.hasMedia && (s.type === "image" ? <img src={`/api/v1/messages/${encodeURIComponent(s.id)}/media?sessionId=${sessionId}`} alt="" className="h-56 w-full object-cover" /> : s.type === "video" ? <video controls src={`/api/v1/messages/${encodeURIComponent(s.id)}/media?sessionId=${sessionId}`} className="h-56 w-full object-cover" /> : null)}<div className="p-3"><p className="text-sm font-medium">{s.senderName ?? s.senderId}</p><p className="text-xs text-muted">{fmtDate(s.timestamp)} · {s.type}</p>{(s.body || s.caption) && <p className="mt-1 whitespace-pre-wrap text-sm">{s.body ?? s.caption}</p>}{can("OPERATOR") && s.senderId && <button className="btn-ghost mt-1 py-0.5 text-xs" onClick={async () => { try { await api(`status/read?sessionId=${sessionId}`, { method: "POST", json: { chatId: s.senderId, statusId: s.id } }); toast.success("Marked viewed"); } catch (e) { toast.error((e as Error).message); } }}>Mark as viewed</button>}</div></div>)}</div>}
+    <Modal open={post} onClose={() => setPost(false)} title="Post status" width="max-w-md" footer={<button className="btn-primary" disabled={busy || (!text && !media)} onClick={send}>Post</button>}>
+      <Field label="Text status"><textarea className="input" rows={3} value={text} onChange={(e) => setText(e.target.value)} disabled={!!media} /></Field><Field label="Background color"><input type="color" value={bg} onChange={(e) => setBg(e.target.value)} /></Field>
+      <div className="my-2 text-center text-xs text-muted">— or —</div><label className="btn-secondary cursor-pointer"><Upload size={14} /> {media ? media.name : "Image / video status"}<input type="file" accept="image/*,video/*" hidden onChange={(e) => setMedia(e.target.files?.[0] ?? null)} /></label>{media && <Field label="Caption"><input className="input" value={caption} onChange={(e) => setCaption(e.target.value)} /></Field>}
+    </Modal>
+  </div>;
+}

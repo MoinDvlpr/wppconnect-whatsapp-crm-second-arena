@@ -1,0 +1,2 @@
+# Inbox
+Chats come from the SQL cache (`chats`, populated by sync and incoming events); *Refresh* re-syncs via `listChats`. Messages: `GET /chats/:id/messages` reads the cache and, when short, fetches from WhatsApp with `getMessages(chatId, {count})`; older pages use `{direction:'before', id:<oldest wa id>}` plus `before=<timestamp>` for the DB. Deduplication by `(session_id, wa_message_id)`. Realtime SSE events update bubbles (acks, edits, revokes, reactions, typing/presence). Opening a chat calls `sendSeen` and `subscribePresence`.

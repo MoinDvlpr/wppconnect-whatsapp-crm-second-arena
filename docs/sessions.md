@@ -1,0 +1,2 @@
+# Sessions
+Lifecycle in `SessionManager`: create (DB row + slug) → start (`wppconnect.create`) → QR → AUTHENTICATING → CONNECTED → READY (sync + heartbeat) → stop/restart/logout/destroy. Auto-restore on boot for `autoStart` sessions. Tokens in `WPP_SESSIONS_PATH/<slug>`. Each DB row of chats/contacts/messages/groups carries `session_id`; data is never mixed. Diagnostics endpoint probes `getConnectionState`, `isConnected`, `isAuthenticated`, `isLoggedIn`, `isOnline`, `getWAVersion`, `getWAJSVersion`, `getBatteryLevel`, `isMultiDevice`.

@@ -1,0 +1,27 @@
+services:
+  app:
+    build:
+      context: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      SUPABASE_DB_URL: "${SUPABASE_DB_URL}"
+      SUPABASE_URL: "${SUPABASE_URL}"
+      SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}"
+      SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"
+      WPP_SESSIONS_PATH: /app/data/wppconnect
+      MEDIA_STORAGE_PATH: /app/data/media
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+    volumes:
+      - appdata:/app/data # WPPConnect auth tokens + media (persistent)
+    shm_size: "1gb" # Chromium needs shared memory
+    healthcheck:
+      test: [ "CMD-SHELL", "node -e \"fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  appdata:

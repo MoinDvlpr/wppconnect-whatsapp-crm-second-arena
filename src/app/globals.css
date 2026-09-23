@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: 248 250 252; --surface: 255 255 255; --surface-2: 241 245 249; --border: 226 232 240; --text: 15 23 42; --muted: 100 116 139;
+  --primary: 22 163 74; --primary-fg: 255 255 255; --bubble-out: 220 252 231; --bubble-in: 255 255 255; --chat-bg: 239 242 245;
+}
+.dark {
+  --bg: 9 12 18; --surface: 17 22 31; --surface-2: 24 31 42; --border: 38 47 61; --text: 226 232 240; --muted: 148 163 184;
+  --primary: 34 197 94; --primary-fg: 5 15 8; --bubble-out: 0 92 75; --bubble-in: 32 44 51; --chat-bg: 11 20 26;
+}
+@theme inline {
+  --color-bg: rgb(var(--bg)); --color-surface: rgb(var(--surface)); --color-surface-2: rgb(var(--surface-2)); --color-border: rgb(var(--border));
+  --color-text: rgb(var(--text)); --color-muted: rgb(var(--muted)); --color-primary: rgb(var(--primary)); --color-primary-fg: rgb(var(--primary-fg));
+  --color-bubble-out: rgb(var(--bubble-out)); --color-bubble-in: rgb(var(--bubble-in)); --color-chat-bg: rgb(var(--chat-bg));
+}
+html, body { height: 100%; }
+body { background: rgb(var(--bg)); color: rgb(var(--text)); font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
+* { scrollbar-width: thin; scrollbar-color: rgb(var(--border)) transparent; }
+.chat-pattern { background-color: rgb(var(--chat-bg)); background-image: radial-gradient(rgb(var(--border) / 0.35) 1px, transparent 1px); background-size: 18px 18px; }
+@keyframes shimmer { 0% { background-position: -400px 0 } 100% { background-position: 400px 0 } }
+.skeleton { background: linear-gradient(90deg, rgb(var(--surface-2)) 25%, rgb(var(--border)) 37%, rgb(var(--surface-2)) 63%); background-size: 800px 100%; animation: shimmer 1.4s infinite linear; }
+@utility input { @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60; }
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap; }
+@utility btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap bg-primary text-primary-fg hover:opacity-90; }
+@utility btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap border border-border bg-surface text-text hover:bg-surface-2; }
+@utility btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap text-muted hover:bg-surface-2 hover:text-text; }
+@utility btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 whitespace-nowrap bg-red-600 text-white hover:bg-red-700; }
+@utility card { @apply rounded-xl border border-border bg-surface; }
+@utility badge { @apply inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium; }
+@utility th { @apply px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted; }
+@utility td { @apply px-3 py-2 text-sm align-middle; }
+@utility label { @apply mb-1 block text-xs font-medium text-muted; }

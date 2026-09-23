@@ -1,0 +1,2 @@
+# Contacts
+`contacts` stores both WhatsApp-side fields (wa_id, lid, push_name, is_business, is_my_contact, avatar) and CRM fields (first/last name, email, company, notes, opt-in/out, owner, source). Custom fields live in `contact_custom_fields` (+ `custom_field_definitions`). CSV import normalizes phones with `normalizePhoneNumber` and reports valid/invalid/duplicate/existing before importing. Live data (`about`, picture, presence, common groups, number check) is fetched on demand from WPPConnect.

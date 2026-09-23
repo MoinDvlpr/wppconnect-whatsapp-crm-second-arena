@@ -1,0 +1,3 @@
+# Templates
+Application templates (SQL table `templates`), not Meta Cloud API templates. Fields: name, category, language, header, body, footer, media (uploaded through `/uploads`, sent as caption+file), buttons (stored for future interactive support), auto-extracted `variables`.
+Variable syntax `{{name}}`, `{{first_name}}`, `{{last_name}}`, `{{phone}}`, `{{email}}`, `{{company}}`, `{{wa_id}}`, any custom field key, any campaign variable. Resolution order: campaign → custom field → contact. `validateTemplateBody` rejects unbalanced braces and invalid names. `POST /templates/render` powers the live preview. Usage stats: `timesUsed`, `lastUsedAt`, linked campaigns and success rate.
