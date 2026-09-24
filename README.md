@@ -11,14 +11,14 @@ A production-oriented, self-hosted WhatsApp CRM / messaging platform: multi-sess
 | Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Lucide icons, dark/light mode |
 | Backend | Next.js route handlers + a service layer (`src/server`) in the same app, Node.js 22 |
 | WhatsApp engine | `@wppconnect-team/wppconnect` **2.3.3** (puppeteer 24) – the only engine |
-| Database | [Supabase](https://supabase.com) (PostgreSQL) via Drizzle ORM |
+| Database | PostgreSQL via Drizzle ORM (see *Database note*) |
 | Realtime | Server-Sent Events (`/api/events`) fed by an internal event bus |
 | Queue | Database-backed campaign job queue (no Redis required; BullMQ can be slotted in behind `campaign.service.ts`) |
 | Storage | Local filesystem behind a `MediaStorage` interface (S3/MinIO-ready) |
-| Deployment | Docker + docker-compose (app container only; DB is hosted on Supabase) |
+| Deployment | Docker + docker-compose |
 
 ### Database note
-All persistence is isolated in `src/db/schema.ts` (24 tables) and the repositories/services. Drizzle ORM connects to Supabase's managed PostgreSQL via the session-mode pooler. The schema uses only portable column types (text/int/bool/timestamp/jsonb). Every WhatsApp-related table carries `session_id` and has the critical indexes (session, chat+timestamp, phone, campaign+status, message status).
+The original brief asked for SQLite + Prisma. This repository is built on the platform-provided **PostgreSQL + Drizzle** runtime (the hosted preview provisions Postgres and runs the health check against it). All persistence is isolated in `src/db/schema.ts` and the repositories/services; the schema uses only portable column types (text/int/bool/timestamp/jsonb) so a SQLite/Prisma port is mechanical. Every WhatsApp-related table carries `session_id` and has the critical indexes (session, chat+timestamp, phone, campaign+status, message status).
 
 ## Features
 
@@ -40,30 +40,19 @@ All persistence is isolated in `src/db/schema.ts` (24 tables) and the repositori
 ## Prerequisites
 
 - **Node.js 22+** (tested on v22.22)
-- **Supabase project** (free tier works) — create one at [supabase.com](https://supabase.com)
+- **PostgreSQL 14+**
 - **Chromium/Chrome** for WPPConnect (puppeteer). Either let puppeteer download Chromium (`npm install` without `PUPPETEER_SKIP_DOWNLOAD`) or install system Chromium and set `PUPPETEER_EXECUTABLE_PATH`. Linux needs the usual Chromium shared libraries (`libnss3 libatk-bridge2.0-0 libgbm1 libasound2 …`) – the Dockerfile installs Debian's `chromium` package.
 - ~1 GB RAM per concurrently connected WhatsApp session (headless Chromium).
-
-## Supabase Setup
-
-1. Create a project at [supabase.com](https://supabase.com)
-2. In **SQL Editor**, paste and run `supabase/migrations/20240101000000_init.sql` to create all tables and indexes
-3. From **Project Settings → API**, copy:
-   - **Project URL** → `SUPABASE_URL`
-   - **anon public** key → `SUPABASE_ANON_KEY`
-   - **service_role** secret key → `SUPABASE_SERVICE_ROLE_KEY`
-4. From **Project Settings → Database → Connection Pooling** (Session mode, port 5432), copy the connection string → `SUPABASE_DB_URL`
 
 ## Installation (development)
 
 ```bash
 git clone <repo> && cd <repo>
-cp .env.example .env            # fill in SUPABASE_DB_URL and other SUPABASE_* vars
+cp .env.example .env            # edit DATABASE_URL etc.
 npm install                      # downloads Chromium unless PUPPETEER_SKIP_DOWNLOAD=1
+npm run db:push                  # create tables
 npm run dev                      # http://localhost:3000
 ```
-
-> Schema is applied directly in Supabase (step 2 above). The `db:push` / `db:migrate` scripts still work for local dev if you set `SUPABASE_DB_URL` in your shell.
 
 Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD` (defaults `admin@example.com` / `admin12345`) and change the password in **Settings → My account**.
 
@@ -72,15 +61,15 @@ Production: `npm run build && npm run start`.
 ## Docker
 
 ```bash
-cp .env.example .env   # fill in all SUPABASE_* vars
+cp .env.example .env
 docker compose up -d --build
 ```
 
-Volumes: `appdata` only (`/app/data` → `wppconnect/` auth tokens + `media/`). The database is hosted on Supabase — no local Postgres container. `shm_size: 1gb` is required for Chromium.
+Volumes: `pgdata` (PostgreSQL) and `appdata` (`/app/data` → `wppconnect/` auth tokens + `media/`). `shm_size: 1gb` is required for Chromium.
 
-- **Backup**: Application-level JSON export via `GET /api/v1/admin/backup` (ADMIN) or Developer → Database. For a full SQL dump use the Supabase Dashboard → Database → Backups.
-- **Restore**: `POST /api/v1/admin/restore` with `{ "confirm": "RESTORE", "tables": {...} }` (insert-only; existing rows are skipped).
-- **Database reset**: Drop and recreate tables via the Supabase SQL Editor, then re-run the migration SQL.
+- **Backup**: `docker compose exec db pg_dump -U postgres app_db > backup.sql` and `docker run --rm -v <project>_appdata:/data -v $PWD:/out alpine tar czf /out/appdata.tgz /data`. Application-level JSON export: `GET /api/v1/admin/backup` (ADMIN) or Developer → Database.
+- **Restore**: `cat backup.sql | docker compose exec -T db psql -U postgres app_db`; JSON: `POST /api/v1/admin/restore` with `{ "confirm": "RESTORE", "tables": {...} }` (insert-only; existing rows are skipped).
+- **Database reset**: `docker compose down -v` (deletes everything) or `psql ... -c "drop schema public cascade; create schema public;"` then `npm run db:push`.
 - **WPP session reset**: use *Logout* in the UI (deletes the token folder) or remove `data/wppconnect/<slug>` while the session is stopped.
 
 ## Sessions & QR login
@@ -143,18 +132,11 @@ docs/                    architecture, installation, wppconnect, sessions, inbox
 
 ## Migrations
 
-The canonical schema lives in `supabase/migrations/20240101000000_init.sql` — run it in the Supabase SQL Editor to provision a fresh project.
-
-For local development with a direct Supabase Postgres connection:
-- `npm run db:generate` — generate a new migration file after editing `src/db/schema.ts`
-- `npm run db:migrate` — apply pending migrations (requires `SUPABASE_DB_URL` set)
-- `npm run db:push` — quick sync for dev (skips migration files)
-
-The Docker entrypoint runs `drizzle-kit migrate` on container boot (using `SUPABASE_DB_URL`) and falls back to `push` if no migration files exist.
+SQL migrations live in `drizzle/` (`npm run db:generate` after editing `src/db/schema.ts`, `npm run db:migrate` to apply; `npm run db:push` for quick dev sync). The Docker entrypoint runs `drizzle-kit migrate` on boot and falls back to `push`.
 
 ## Tests
 
 `npm test` – 35 tests:
 * **Unit** (`tests/*.test.ts`): template renderer, ID normalization, message/chat normalization, campaign state machine, RBAC/session restrictions/API keys, capability audit against the installed WPPConnect package.
-* **Integration** (`tests/integration/api.test.ts`, needs `SUPABASE_DB_URL`): real router + real database – API-key auth & RBAC, session creation/status/QR, session-restricted keys, honest `SESSION_NOT_READY` on WhatsApp-bound endpoints, template CRUD/render, CSV import validation, audience resolution (labels/exclusions/opt-out), campaign creation & state guards, message persistence idempotency & ack ordering, webhook CRUD with SSRF guard, capability registry/OpenAPI/whitelist enforcement.
+* **Integration** (`tests/integration/api.test.ts`, needs `DATABASE_URL`): real router + real database – API-key auth & RBAC, session creation/status/QR, session-restricted keys, honest `SESSION_NOT_READY` on WhatsApp-bound endpoints, template CRUD/render, CSV import validation, audience resolution (labels/exclusions/opt-out), campaign creation & state guards, message persistence idempotency & ack ordering, webhook CRUD with SSRF guard, capability registry/OpenAPI/whitelist enforcement.
 * E2E (browser + real WhatsApp QR scan) is intentionally manual – see `docs/troubleshooting.md` and the acceptance checklist in `docs/developer.md`.

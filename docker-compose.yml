@@ -1,16 +1,33 @@
 services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   app:
     build:
       context: .
+      args:
+        DATABASE_URL: postgresql://postgres:postgres@db:5432/app_db
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "3000:3000"
     env_file: .env
     environment:
-      SUPABASE_DB_URL: "${SUPABASE_DB_URL}"
-      SUPABASE_URL: "${SUPABASE_URL}"
-      SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}"
-      SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/app_db
       WPP_SESSIONS_PATH: /app/data/wppconnect
       MEDIA_STORAGE_PATH: /app/data/media
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
@@ -24,4 +41,5 @@ services:
       retries: 5
 
 volumes:
+  pgdata:
   appdata:

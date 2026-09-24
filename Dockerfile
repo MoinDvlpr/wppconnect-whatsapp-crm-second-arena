@@ -12,6 +12,9 @@ ENV PUPPETEER_SKIP_DOWNLOAD=1 DOCKER_BUILD=true NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+ARG DATABASE_URL
+ENV DATABASE_URL="${DATABASE_URL}"
+
 RUN npm run build
 
 # ---------- runtime ----------
@@ -25,7 +28,7 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/node_modules/drizzle-kit ./node_modules/drizzle-kit
 COPY --from=deps /app/node_modules ./node_modules
-COPY drizzle.config.ts src/db/schema.ts ./db-schema/
+COPY drizzle.config.json src/db/schema.ts ./db-schema/
 COPY drizzle ./drizzle
 COPY docker-entrypoint.sh ./
 RUN mkdir -p /app/data/wppconnect /app/data/media && chown -R node:node /app

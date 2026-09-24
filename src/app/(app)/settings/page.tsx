@@ -30,7 +30,7 @@ export default function SettingsPage() {
       {tab === "Users" && <Users />}
       {tab === "Account" && <Account name={me?.name} />}
     </div>
-    <p className="mt-3 text-[11px] text-muted">Environment-level settings (SUPABASE_DB_URL, SUPABASE_URL, WPP_SESSIONS_PATH, MEDIA_STORAGE_PATH, AUTH_SECRET, LOG_LEVEL) are configured via <code>.env</code>.</p>
+    <p className="mt-3 text-[11px] text-muted">Environment-level settings (DATABASE_URL, WPP_SESSIONS_PATH, MEDIA_STORAGE_PATH, AUTH_SECRET, LOG_LEVEL) are configured via <code>.env</code>.</p>
   </div>;
 }
 function Users() {

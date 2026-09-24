@@ -1,2 +1,2 @@
 # Installation
-See README (Prerequisites, Supabase Setup, Installation, Docker). Environment variables are documented in `.env.example`. Apply the schema by running `supabase/migrations/20240101000000_init.sql` in the Supabase SQL Editor. For schema evolution: edit `src/db/schema.ts`, run `npm run db:generate` (requires `SUPABASE_DB_URL`), then apply migrations via `npm run db:migrate` or push them directly with `npm run db:push`.
+See README (Prerequisites, Installation, Docker). Environment variables are documented in `.env.example`. Apply schema with `npm run db:push` (Drizzle push; migrations can be generated with `npx drizzle-kit generate --config=drizzle.config.json`).

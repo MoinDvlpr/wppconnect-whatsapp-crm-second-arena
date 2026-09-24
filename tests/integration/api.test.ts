@@ -1,5 +1,5 @@
 /**
- * Integration tests: run the real API router against the real database (SUPABASE_DB_URL from .env).
+ * Integration tests: run the real API router against the real database (DATABASE_URL from .env).
  * No WPPConnect session is started (sessions are created with start:false); WhatsApp-bound endpoints
  * must respond with SESSION_NOT_READY instead of faking success.
  */
